@@ -1,0 +1,227 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Inventory Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f2f5f9;
+      color: #222;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+    }
+
+    h1 { color: #183b65; }
+
+    .panel {
+      background: white;
+      padding: 18px;
+      margin: 15px 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px #0001;
+    }
+
+    input, select, button {
+      padding: 10px;
+      margin: 5px 3px;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
+      background: #2459a9;
+      color: white;
+      border: 0;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+
+    .stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: #e6efff;
+      padding: 14px;
+      border-radius: 8px;
+      flex: 1;
+      min-width: 130px;
+    }
+
+    .delete { background: #c0392b; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Product Inventory Dashboard</h1>
+    <p>Add, search, filter and analyse your products.</p>
+
+    <div class="panel">
+      <h2>Inventory Analytics</h2>
+      <div class="stats">
+        <div class="stat">Total Products: <strong id="count">0</strong></div>
+        <div class="stat">Inventory Value: Rs. <strong id="value">0</strong></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Add Product</h2>
+      <input id="name" placeholder="Product name">
+      <input id="price" type="number" min="0" placeholder="Price">
+      <input id="quantity" type="number" min="0" step="1" placeholder="Quantity">
+      <select id="category">
+        <option>Electronics</option>
+        <option>Education</option>
+        <option>Accessories</option>
+        <option>Other</option>
+      </select>
+      <button onclick="addProduct()">Add Product</button>
+      <p id="message"></p>
+    </div>
+
+    <div class="panel">
+      <h2>Search and Filter</h2>
+      <input id="search" placeholder="Search product..." oninput="render()">
+      <select id="filter" onchange="render()">
+        <option value="All">All Categories</option>
+        <option>Electronics</option>
+        <option>Education</option>
+        <option>Accessories</option>
+        <option>Other</option>
+      </select>
+    </div>
+
+    <div class="panel">
+      <h2>Product List</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Category</th>
+              <th>Price</th>
+              <th>Quantity</th>
+              <th>Total</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="products"></tbody>
+        </table>
+      </div>
+      <button onclick="showReport()">Generate Report</button>
+      <p id="report"></p>
+    </div>
+  </div>
+
+  <script>
+    let inventory = [
+      { name: "Laptop", price: 45000, quantity: 2, category: "Electronics" },
+      { name: "Notebook", price: 50, quantity: 20, category: "Education" },
+      { name: "School Bag", price: 800, quantity: 5, category: "Accessories" }
+    ];
+
+    function addProduct() {
+      const name = document.getElementById("name").value.trim();
+      const price = Number(document.getElementById("price").value);
+      const quantity = Number(document.getElementById("quantity").value);
+      const category = document.getElementById("category").value;
+      const message = document.getElementById("message");
+
+      if (!name || document.getElementById("price").value === "" ||
+          document.getElementById("quantity").value === "" ||
+          !Number.isFinite(price) || !Number.isInteger(quantity) ||
+          price < 0 || quantity < 0) {
+        message.textContent = "Enter a name, valid price and whole-number quantity.";
+        return;
+      }
+
+      inventory.push({ name, price, quantity, category });
+      message.textContent = "Product added successfully!";
+      document.getElementById("name").value = "";
+      document.getElementById("price").value = "";
+      document.getElementById("quantity").value = "";
+      render();
+    }
+
+    function render() {
+      const search = document.getElementById("search").value.toLowerCase();
+      const filter = document.getElementById("filter").value;
+      const visible = inventory.filter(function(product) {
+        return product.name.toLowerCase().includes(search) &&
+          (filter === "All" || product.category === filter);
+      });
+
+      document.getElementById("products").innerHTML = visible.map(function(product) {
+        const index = inventory.indexOf(product);
+        return "<tr><td>" + escapeHTML(product.name) +
+          "</td><td>" + escapeHTML(product.category) +
+          "</td><td>Rs. " + product.price.toFixed(2) +
+          "</td><td>" + product.quantity +
+          "</td><td>Rs. " + (product.price * product.quantity).toFixed(2) +
+          "</td><td><button class='delete' onclick='removeProduct(" + index +
+          ")'>Delete</button></td></tr>";
+      }).join("");
+
+      document.getElementById("count").textContent = inventory.length;
+      const totalValue = inventory.reduce(function(total, product) {
+        return total + product.price * product.quantity;
+      }, 0);
+      document.getElementById("value").textContent = totalValue.toFixed(2);
+    }
+
+    function removeProduct(index) {
+      inventory.splice(index, 1);
+      render();
+    }
+
+    function showReport() {
+      const categories = {};
+      inventory.forEach(function(product) {
+        categories[product.category] =
+          (categories[product.category] || 0) + product.quantity;
+      });
+
+      document.getElementById("report").textContent =
+        "Report: " + inventory.length + " products. " +
+        "Total inventory value: Rs. " +
+        inventory.reduce(function(sum, product) {
+          return sum + product.price * product.quantity;
+        }, 0).toFixed(2) +
+        ". Quantity by category: " + JSON.stringify(categories);
+    }
+
+    function escapeHTML(value) {
+      return value.replace(/[&<>"']/g, function(character) {
+        return {
+          "&": "&amp;", "<": "&lt;", ">": "&gt;",
+          '"': "&quot;", "'": "&#39;"
+        }[character];
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
